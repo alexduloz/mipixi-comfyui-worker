@@ -169,7 +169,9 @@ def handler(job):
     # Debug mode - return volume info
     if job_input.get("debug"):
         info = {"paths": {}}
-        for path in ["/runpod-volume", "/workspace", "/runpod-volume/models", "/workspace/models"]:
+        for path in ["/runpod-volume", "/runpod-volume/ComfyUI", "/runpod-volume/ComfyUI/models",
+                     "/runpod-volume/ComfyUI/models/unet", "/runpod-volume/ComfyUI/models/clip",
+                     "/workspace", "/workspace/ComfyUI", "/workspace/ComfyUI/models"]:
             if os.path.exists(path):
                 try:
                     contents = os.listdir(path)[:20]
