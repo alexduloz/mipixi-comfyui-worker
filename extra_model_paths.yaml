@@ -1,4 +1,22 @@
+# Network volume mounted at /runpod-volume
+# Volume content IS the ComfyUI folder directly
 runpod_volume:
+    base_path: /runpod-volume/
+    checkpoints: models/checkpoints/
+    clip: models/clip/
+    clip_vision: models/clip_vision/
+    controlnet: models/controlnet/
+    diffusion_models: models/diffusion_models/
+    embeddings: models/embeddings/
+    ipadapter: models/ipadapter/
+    loras: models/loras/
+    style_models: models/style_models/
+    unet: models/unet/
+    upscale_models: models/upscale_models/
+    vae: models/vae/
+
+# Fallback: volume contains ComfyUI subfolder
+runpod_volume_nested:
     base_path: /runpod-volume/ComfyUI/
     checkpoints: models/checkpoints/
     clip: models/clip/
@@ -13,8 +31,9 @@ runpod_volume:
     upscale_models: models/upscale_models/
     vae: models/vae/
 
+# Pod-style path
 workspace_volume:
-    base_path: /workspace/ComfyUI/
+    base_path: /workspace/
     checkpoints: models/checkpoints/
     clip: models/clip/
     clip_vision: models/clip_vision/

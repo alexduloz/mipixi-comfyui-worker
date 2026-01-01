@@ -20,43 +20,48 @@ def log(msg):
 
 
 def find_volume_path():
-    """Find where the network volume is mounted"""
+    """Find where the network volume is mounted and where models are"""
+    # Check various possible paths for models
     candidates = [
-        "/runpod-volume/ComfyUI",
-        "/workspace/ComfyUI",
-        "/runpod-volume",
-        "/workspace"
+        ("/runpod-volume", "models"),           # Volume IS ComfyUI folder
+        ("/runpod-volume/ComfyUI", "models"),   # Volume contains ComfyUI
+        ("/workspace", "models"),                # Pod-style direct
+        ("/workspace/ComfyUI", "models"),        # Pod-style nested
     ]
 
-    for path in candidates:
-        if os.path.exists(path):
-            # Check if it has models
-            models_path = os.path.join(path, "models") if not path.endswith("ComfyUI") else os.path.join(path, "models")
-            if path.endswith("ComfyUI"):
-                models_path = os.path.join(path, "models")
-            else:
-                models_path = os.path.join(path, "ComfyUI", "models")
+    log("Searching for models...")
 
-            if os.path.exists(models_path):
-                log(f"Found volume at: {path}")
-                log(f"Models at: {models_path}")
-                # List some models
-                for subdir in os.listdir(models_path)[:5]:
+    for base, models_subdir in candidates:
+        models_path = os.path.join(base, models_subdir)
+        log(f"Checking: {models_path}")
+
+        if os.path.exists(models_path) and os.path.isdir(models_path):
+            # Verify it has model subdirs
+            subdirs = os.listdir(models_path)
+            if any(d in subdirs for d in ['unet', 'checkpoints', 'clip', 'vae']):
+                log(f"FOUND models at: {models_path}")
+                for subdir in subdirs[:8]:
                     subpath = os.path.join(models_path, subdir)
                     if os.path.isdir(subpath):
                         files = os.listdir(subpath)[:3]
-                        log(f"  {subdir}/: {files}")
-                return path
-            else:
-                log(f"Path exists but no models: {path}")
+                        log(f"  {subdir}/: {files if files else '(empty)'}")
+                return base
 
-    log("WARNING: No volume with models found!")
-    log(f"Checking /runpod-volume: {os.path.exists('/runpod-volume')}")
-    if os.path.exists('/runpod-volume'):
-        log(f"Contents: {os.listdir('/runpod-volume')[:10]}")
-    log(f"Checking /workspace: {os.path.exists('/workspace')}")
-    if os.path.exists('/workspace'):
-        log(f"Contents: {os.listdir('/workspace')[:10]}")
+    # Debug: show what exists
+    log("WARNING: No models found!")
+    for path in ["/runpod-volume", "/workspace"]:
+        if os.path.exists(path):
+            contents = os.listdir(path)[:15]
+            log(f"{path} contents: {contents}")
+            # Go deeper
+            for item in contents[:5]:
+                subpath = os.path.join(path, item)
+                if os.path.isdir(subpath):
+                    subcontents = os.listdir(subpath)[:5]
+                    log(f"  {item}/: {subcontents}")
+        else:
+            log(f"{path}: does not exist")
+
     return None
 
 
@@ -65,26 +70,27 @@ def setup_volume_symlinks(volume_path):
     if not volume_path:
         return
 
-    if volume_path.endswith("ComfyUI"):
-        volume_nodes = os.path.join(volume_path, "custom_nodes")
-    else:
-        volume_nodes = os.path.join(volume_path, "ComfyUI", "custom_nodes")
+    # Check for custom_nodes
+    for nodes_path in [
+        os.path.join(volume_path, "custom_nodes"),
+        os.path.join(volume_path, "ComfyUI", "custom_nodes"),
+    ]:
+        if os.path.exists(nodes_path):
+            local_nodes = "/workspace/ComfyUI/custom_nodes"
+            log(f"Linking custom_nodes from {nodes_path}")
 
-    local_nodes = "/workspace/ComfyUI/custom_nodes"
+            for node in os.listdir(nodes_path):
+                src = os.path.join(nodes_path, node)
+                dst = os.path.join(local_nodes, node)
+                if os.path.isdir(src) and not os.path.exists(dst):
+                    try:
+                        os.symlink(src, dst)
+                        log(f"  Linked: {node}")
+                    except Exception as e:
+                        log(f"  Failed {node}: {e}")
+            return
 
-    if not os.path.exists(volume_nodes):
-        log(f"No custom_nodes at {volume_nodes}")
-        return
-
-    for node in os.listdir(volume_nodes):
-        src = os.path.join(volume_nodes, node)
-        dst = os.path.join(local_nodes, node)
-        if os.path.isdir(src) and not os.path.exists(dst):
-            try:
-                os.symlink(src, dst)
-                log(f"Linked: {node}")
-            except Exception as e:
-                log(f"Failed to link {node}: {e}")
+    log("No custom_nodes found on volume")
 
 
 def start_comfyui():
@@ -109,7 +115,7 @@ def start_comfyui():
         except:
             pass
         time.sleep(1)
-        if i % 30 == 0:
+        if i % 30 == 0 and i > 0:
             log(f"Waiting for ComfyUI... {i}s")
 
     log("ComfyUI failed to start")
