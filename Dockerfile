@@ -27,23 +27,8 @@ COPY handler.py /workspace/handler.py
 COPY start.sh /workspace/start.sh
 RUN chmod +x /workspace/start.sh
 
-# Network Volume paths
-RUN cat > /workspace/ComfyUI/extra_model_paths.yaml << 'EOF'
-runpod_volume:
-    base_path: /runpod-volume/ComfyUI/
-    checkpoints: models/checkpoints/
-    clip: models/clip/
-    clip_vision: models/clip_vision/
-    controlnet: models/controlnet/
-    diffusion_models: models/diffusion_models/
-    embeddings: models/embeddings/
-    ipadapter: models/ipadapter/
-    loras: models/loras/
-    style_models: models/style_models/
-    unet: models/unet/
-    upscale_models: models/upscale_models/
-    vae: models/vae/
-EOF
+# Network Volume model paths
+COPY extra_model_paths.yaml /workspace/ComfyUI/extra_model_paths.yaml
 
 WORKDIR /workspace
 CMD ["/workspace/start.sh"]
