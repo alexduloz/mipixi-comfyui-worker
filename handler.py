@@ -168,18 +168,36 @@ def handler(job):
 
     # Debug mode - return volume info
     if job_input.get("debug"):
-        info = {"paths": {}}
+        info = {"paths": {}, "model_files": {}}
+
+        # Check directory structure
         for path in ["/runpod-volume", "/runpod-volume/ComfyUI", "/runpod-volume/ComfyUI/models",
                      "/runpod-volume/ComfyUI/models/unet", "/runpod-volume/ComfyUI/models/clip",
+                     "/runpod-volume/ComfyUI/models/diffusion_models",
+                     "/runpod-volume/ComfyUI/models/text_encoders",
+                     "/runpod-volume/ComfyUI/models/loras",
+                     "/runpod-volume/ComfyUI/models/vae",
+                     "/runpod-volume/ComfyUI/models/checkpoints",
                      "/workspace", "/workspace/ComfyUI", "/workspace/ComfyUI/models"]:
             if os.path.exists(path):
                 try:
-                    contents = os.listdir(path)[:20]
+                    contents = os.listdir(path)[:30]
                     info["paths"][path] = contents
                 except Exception as e:
                     info["paths"][path] = f"error: {e}"
             else:
                 info["paths"][path] = "NOT EXISTS"
+
+        # Find all .safetensors and .gguf files on volume
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["find", "/runpod-volume", "-name", "*.safetensors", "-o", "-name", "*.gguf"],
+                capture_output=True, text=True, timeout=30
+            )
+            info["model_files"]["volume"] = result.stdout.strip().split("\n")[:50]
+        except Exception as e:
+            info["model_files"]["volume"] = f"error: {e}"
 
         # Check extra_model_paths.yaml
         yaml_path = "/workspace/ComfyUI/extra_model_paths.yaml"
