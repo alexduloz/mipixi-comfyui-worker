@@ -161,9 +161,32 @@ def handler(job):
     RunPod handler
 
     Input: {"workflow": {...}, "timeout": 300}
+    Or: {"debug": true} to get volume info
     Output: {"images": [{"filename": "...", "data": "base64..."}], "prompt_id": "..."}
     """
     job_input = job.get("input", {})
+
+    # Debug mode - return volume info
+    if job_input.get("debug"):
+        info = {"paths": {}}
+        for path in ["/runpod-volume", "/workspace", "/runpod-volume/models", "/workspace/models"]:
+            if os.path.exists(path):
+                try:
+                    contents = os.listdir(path)[:20]
+                    info["paths"][path] = contents
+                except Exception as e:
+                    info["paths"][path] = f"error: {e}"
+            else:
+                info["paths"][path] = "NOT EXISTS"
+
+        # Check extra_model_paths.yaml
+        yaml_path = "/workspace/ComfyUI/extra_model_paths.yaml"
+        if os.path.exists(yaml_path):
+            with open(yaml_path) as f:
+                info["extra_model_paths"] = f.read()[:500]
+
+        return info
+
     workflow = job_input.get("workflow")
 
     if not workflow:
