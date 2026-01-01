@@ -12,3 +12,18 @@ runpod_volume:
     unet: models/unet/
     upscale_models: models/upscale_models/
     vae: models/vae/
+
+workspace_volume:
+    base_path: /workspace/ComfyUI/
+    checkpoints: models/checkpoints/
+    clip: models/clip/
+    clip_vision: models/clip_vision/
+    controlnet: models/controlnet/
+    diffusion_models: models/diffusion_models/
+    embeddings: models/embeddings/
+    ipadapter: models/ipadapter/
+    loras: models/loras/
+    style_models: models/style_models/
+    unet: models/unet/
+    upscale_models: models/upscale_models/
+    vae: models/vae/

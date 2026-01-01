@@ -19,13 +19,61 @@ def log(msg):
     print(f"[mipixi] {msg}", flush=True)
 
 
-def setup_volume_symlinks():
+def find_volume_path():
+    """Find where the network volume is mounted"""
+    candidates = [
+        "/runpod-volume/ComfyUI",
+        "/workspace/ComfyUI",
+        "/runpod-volume",
+        "/workspace"
+    ]
+
+    for path in candidates:
+        if os.path.exists(path):
+            # Check if it has models
+            models_path = os.path.join(path, "models") if not path.endswith("ComfyUI") else os.path.join(path, "models")
+            if path.endswith("ComfyUI"):
+                models_path = os.path.join(path, "models")
+            else:
+                models_path = os.path.join(path, "ComfyUI", "models")
+
+            if os.path.exists(models_path):
+                log(f"Found volume at: {path}")
+                log(f"Models at: {models_path}")
+                # List some models
+                for subdir in os.listdir(models_path)[:5]:
+                    subpath = os.path.join(models_path, subdir)
+                    if os.path.isdir(subpath):
+                        files = os.listdir(subpath)[:3]
+                        log(f"  {subdir}/: {files}")
+                return path
+            else:
+                log(f"Path exists but no models: {path}")
+
+    log("WARNING: No volume with models found!")
+    log(f"Checking /runpod-volume: {os.path.exists('/runpod-volume')}")
+    if os.path.exists('/runpod-volume'):
+        log(f"Contents: {os.listdir('/runpod-volume')[:10]}")
+    log(f"Checking /workspace: {os.path.exists('/workspace')}")
+    if os.path.exists('/workspace'):
+        log(f"Contents: {os.listdir('/workspace')[:10]}")
+    return None
+
+
+def setup_volume_symlinks(volume_path):
     """Symlink custom_nodes from Network Volume"""
-    volume_nodes = "/runpod-volume/ComfyUI/custom_nodes"
+    if not volume_path:
+        return
+
+    if volume_path.endswith("ComfyUI"):
+        volume_nodes = os.path.join(volume_path, "custom_nodes")
+    else:
+        volume_nodes = os.path.join(volume_path, "ComfyUI", "custom_nodes")
+
     local_nodes = "/workspace/ComfyUI/custom_nodes"
 
     if not os.path.exists(volume_nodes):
-        log("No custom_nodes on volume")
+        log(f"No custom_nodes at {volume_nodes}")
         return
 
     for node in os.listdir(volume_nodes):
@@ -170,7 +218,8 @@ def handler(job):
 
 # === Startup ===
 log("=== mipixi ComfyUI Worker ===")
-setup_volume_symlinks()
+volume_path = find_volume_path()
+setup_volume_symlinks(volume_path)
 
 if not start_comfyui():
     log("WARNING: ComfyUI may not be available")
