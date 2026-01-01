@@ -24,4 +24,5 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/comfyui-worker:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/comfyui-worker:v2
             ${{ secrets.DOCKERHUB_USERNAME }}/comfyui-worker:${{ github.sha }}
